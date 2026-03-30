@@ -1,5 +1,4 @@
 import os
-import pymysql
 from dotenv import load_dotenv
 from pipeline.extract import extract_orders
 
