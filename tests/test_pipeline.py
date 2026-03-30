@@ -4,6 +4,7 @@ import psycopg2
 from dotenv import load_dotenv
 from pipeline.extract import extract_orders
 from pipeline.load import load_orders
+from pipeline.main import run_pipeline
 
 load_dotenv()
 
@@ -59,3 +60,30 @@ def test_load_is_idempotent():
     finally:
         conn.close()
     assert count == len(rows), f"Expected {len(rows)} after double load, got {count}"
+
+
+def test_pipeline_populates_summary_view():
+    run_pipeline()
+    conn = get_pg_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("SELECT * FROM monthly_sales_summary LIMIT 1")
+            row = cur.fetchone()
+            assert row is not None, "Summary view returned no rows"
+            cur.execute("SELECT COUNT(*) FROM monthly_sales_summary")
+            count = cur.fetchone()[0]
+            assert count > 0, "Summary view is empty"
+    finally:
+        conn.close()
+
+
+def test_pipeline_row_count_matches_source():
+    run_pipeline()
+    conn = get_pg_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("SELECT COUNT(*) FROM raw_orders")
+            count = cur.fetchone()[0]
+    finally:
+        conn.close()
+    assert count == 1132, f"Expected 1132 rows, got {count}"
