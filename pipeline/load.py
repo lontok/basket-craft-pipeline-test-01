@@ -28,8 +28,7 @@ def load_orders(rows):
     try:
         with conn.cursor() as cur:
             cur.execute("TRUNCATE raw_orders")
-            for row in rows:
-                cur.execute(INSERT_SQL, row)
+            cur.executemany(INSERT_SQL, rows)
         conn.commit()
     finally:
         conn.close()

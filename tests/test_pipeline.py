@@ -1,6 +1,9 @@
 import os
+
+import psycopg2
 from dotenv import load_dotenv
 from pipeline.extract import extract_orders
+from pipeline.load import load_orders
 
 load_dotenv()
 
@@ -19,10 +22,6 @@ def test_extract_orders_has_expected_columns():
         "promo_code_used", "is_reorder",
     }
     assert set(first.keys()) == expected_keys
-
-
-import psycopg2
-from pipeline.load import load_orders
 
 
 def get_pg_connection():
