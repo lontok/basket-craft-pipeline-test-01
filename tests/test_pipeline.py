@@ -19,3 +19,44 @@ def test_extract_orders_has_expected_columns():
         "promo_code_used", "is_reorder",
     }
     assert set(first.keys()) == expected_keys
+
+
+import psycopg2
+from pipeline.load import load_orders
+
+
+def get_pg_connection():
+    return psycopg2.connect(
+        host=os.environ["POSTGRES_HOST"],
+        port=int(os.environ["POSTGRES_PORT"]),
+        user=os.environ["POSTGRES_USER"],
+        password=os.environ["POSTGRES_PASSWORD"],
+        dbname=os.environ["POSTGRES_DB"],
+    )
+
+
+def test_load_orders_inserts_rows():
+    rows = extract_orders()
+    load_orders(rows)
+    conn = get_pg_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("SELECT COUNT(*) FROM raw_orders")
+            count = cur.fetchone()[0]
+    finally:
+        conn.close()
+    assert count == len(rows), f"Expected {len(rows)} rows, got {count}"
+
+
+def test_load_is_idempotent():
+    rows = extract_orders()
+    load_orders(rows)
+    load_orders(rows)
+    conn = get_pg_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("SELECT COUNT(*) FROM raw_orders")
+            count = cur.fetchone()[0]
+    finally:
+        conn.close()
+    assert count == len(rows), f"Expected {len(rows)} after double load, got {count}"
